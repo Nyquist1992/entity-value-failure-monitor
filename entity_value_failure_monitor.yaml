@@ -1,0 +1,200 @@
+blueprint:
+  name: Entity / Value Failure Monitor
+  description: >-
+    Monitors entities in the configured scope and notifies on failure conditions:
+    sensor values that exceed the staleness threshold without updating, and any
+    entity whose state stays unavailable/unknown beyond the offline threshold.
+    While a fault persists, a reminder is re-sent at the reminder interval and
+    resets automatically once the entity recovers. Tapping the notification opens
+    the entity's detail page. The scope can mix labels, areas, floors and
+    individually selected entities; the device_class filter applies to staleness
+    detection only. Adjust the scope or thresholds in this automation's
+    configuration at any time.
+  domain: automation
+  homeassistant:
+    min_version: 2024.10.0
+  source_url: https://github.com/Nyquist1992/entity-value-failure-monitor
+  input:
+    target_labels:
+      name: Labels to monitor (optional)
+      default: []
+      selector:
+        label:
+          multiple: true
+    target_areas:
+      name: Areas to monitor (optional)
+      default: []
+      selector:
+        area:
+          multiple: true
+    target_floors:
+      name: Floors to monitor (optional)
+      default: []
+      selector:
+        floor:
+          multiple: true
+    target_entities:
+      name: Additional entities to monitor (optional, any domain)
+      description: Extra entities beyond labels/areas/floors. Any domain is allowed.
+      default: []
+      selector:
+        entity:
+          multiple: true
+    device_classes:
+      name: device_class filter (optional, staleness detection only)
+      description: Only monitor staleness for sensors with these device classes. Offline detection is not filtered.
+      default: []
+      selector:
+        select:
+          multiple: true
+          mode: dropdown
+          options:
+            - value: temperature
+              label: Temperature
+            - value: humidity
+              label: Humidity
+            - value: power
+              label: Power
+            - value: energy
+              label: Energy
+            - value: current
+              label: Current
+            - value: voltage
+              label: Voltage
+            - value: illuminance
+              label: Illuminance
+            - value: pressure
+              label: Pressure
+            - value: battery
+              label: Battery
+            - value: gas
+              label: Gas
+            - value: pm25
+              label: PM2.5
+            - value: co2
+              label: CO2
+    stale_minutes:
+      name: Staleness threshold (minutes)
+      description: A sensor value not updated for this long is reported as stale.
+      default: 30
+      selector:
+        number:
+          min: 5
+          max: 1440
+          unit_of_measurement: minutes
+          mode: box
+    offline_minutes:
+      name: Offline threshold (minutes)
+      description: An unavailable or unknown state persisting this long is reported as offline.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 1440
+          step: 1
+          unit_of_measurement: minutes
+          mode: box
+    reminder_hours:
+      name: Reminder interval (hours)
+      description: How often to re-notify while a fault persists; reset after recovery.
+      default: 12
+      selector:
+        number:
+          min: 1
+          max: 168
+          step: 1
+          unit_of_measurement: hours
+          mode: box
+    check_interval:
+      name: Check interval
+      description: How often the monitor runs; determines the maximum notification delay.
+      default: "/5"
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - value: "/1"
+              label: Every 1 minute
+            - value: "/5"
+              label: Every 5 minutes
+            - value: "/10"
+              label: Every 10 minutes
+            - value: "/15"
+              label: Every 15 minutes
+            - value: "/30"
+              label: Every 30 minutes
+    notify_action:
+      name: Notification action
+      description: >-
+        Configure the notification like in the automation editor. Available variables:
+        stuck_entity_name, stuck_entity_id, stuck_minutes, stuck_value, and
+        stuck_type (stale/offline). Tapping the notification opens the entity's detail page.
+      default:
+        - action: notify.notify
+          data:
+            title: "⚠️ Entity failure detected"
+            message: >-
+              {{ stuck_entity_name }} has been {{ stuck_type }} for {{ stuck_minutes }} minutes (current state: {{ stuck_value }})
+            data:
+              clickAction: "{{ 'entityId:' ~ stuck_entity_id }}"
+              tag: "stuck_{{ stuck_entity_id }}"
+      selector:
+        action: {}
+
+variables:
+  target_labels: !input target_labels
+  target_areas: !input target_areas
+  target_floors: !input target_floors
+  target_entities: !input target_entities
+  device_classes: !input device_classes
+  stale_minutes: !input stale_minutes
+  offline_minutes: !input offline_minutes
+  reminder_hours: !input reminder_hours
+  check_interval: !input check_interval
+
+trigger:
+  - trigger: time_pattern
+    minutes: !input check_interval
+
+condition: []
+
+action:
+  - variables:
+      check_interval_num: "{{ check_interval | replace('/', '') | int }}"
+      reminder_minutes: "{{ (reminder_hours | float(12) * 60) | int }}"
+      monitored_entities: >-
+        {% set from_labels = target_labels | map('label_entities') | sum(start=[]) %}
+        {% set from_areas = target_areas | map('area_entities') | sum(start=[]) %}
+        {% set from_floors = target_floors | map('floor_entities') | sum(start=[]) %}
+        {{ (from_labels + from_areas + from_floors + target_entities) | unique | list }}
+  - repeat:
+      for_each: "{{ monitored_entities }}"
+      sequence:
+        - variables:
+            ent: "{{ repeat.item }}"
+        - if:
+            - condition: template
+              value_template: "{{ states[ent] is not none }}"
+          then:
+            - variables:
+                is_offline: "{{ states(ent) in ['unavailable', 'unknown'] }}"
+                is_sensor: "{{ ent.split('.')[0] == 'sensor' }}"
+                minutes_stuck: >-
+                  {{ ((as_timestamp(now()) - as_timestamp(states[ent].last_updated)) / 60) | round(0) | int }}
+                fault_threshold: "{{ offline_minutes if is_offline else stale_minutes }}"
+            - if:
+                - condition: template
+                  value_template: >-
+                    {{ (is_offline or (is_sensor and (device_classes | length == 0 or state_attr(ent, 'device_class') in device_classes))) and
+                       minutes_stuck >= (fault_threshold | int) and
+                       ((minutes_stuck - (fault_threshold | int)) % (reminder_minutes | int)) < check_interval_num }}
+              then:
+                - variables:
+                    stuck_entity_id: "{{ ent }}"
+                    stuck_entity_name: "{{ state_attr(ent, 'friendly_name') or ent }}"
+                    stuck_minutes: "{{ minutes_stuck }}"
+                    stuck_value: "{{ states(ent) }}"
+                    stuck_type: "{{ 'offline' if is_offline else 'stale' }}"
+                - sequence: !input notify_action
+
+mode: single
