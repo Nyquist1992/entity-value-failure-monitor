@@ -39,7 +39,7 @@ Or manually copy `entity_value_failure_monitor.yaml` into `<config>/blueprints/a
 
 ### Configuration
 
-| Input / 參數 | Description / 說明 |
+| Input | Description |
 |---|---|
 | Labels / Areas / Floors / Additional entities | Monitored scope (mixed freely, union) |
 | device_class filter | Applies to staleness detection only; offline detection is never filtered |
@@ -91,7 +91,7 @@ Home Assistant 自動化藍圖：監控一組可自由設定的實體，於「�
 
 ### 設定參數
 
-| Input / 參數 | Description / 說明 |
+| 參數 | 說明 |
 |---|---|
 | 標籤／區域／樓層／附加實體 | 監控範圍（可自由混用，取聯集） |
 | device_class 篩選 | 僅作用於停滯判定；離線判定不受篩選 |
