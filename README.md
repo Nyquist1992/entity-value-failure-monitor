@@ -24,7 +24,7 @@ While a fault persists, reminders are re-sent at the reminder interval. Once the
 
 ### Add Blueprint
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/create-blueprint/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FNyquist1992%2Fentity-value-failure-monitor%2Fmain%2Fentity_value_failure_monitor.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FNyquist1992%2Fentity-value-failure-monitor%2Fmain%2Fentity_value_failure_monitor.yaml)
 
 Or manually copy `entity_value_failure_monitor.yaml` into `<config>/blueprints/automation/` and reload automations.
 
@@ -76,7 +76,7 @@ Home Assistant 自動化藍圖：監控一組可自由設定的實體，於「�
 
 ### 新增藍圖
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/create-blueprint/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FNyquist1992%2Fentity-value-failure-monitor%2Fmain%2Fentity_value_failure_monitor.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FNyquist1992%2Fentity-value-failure-monitor%2Fmain%2Fentity_value_failure_monitor.yaml)
 
 或手動將 `entity_value_failure_monitor.yaml` 複製到 `<config>/blueprints/automation/` 後重新載入自動化。
 
